@@ -22,6 +22,12 @@ class DungeonGenerator {
 
     Random random = Random(params.seed);
 
+    // Generate room types with controlled distribution
+    List<RoomType> roomTypes = _generateRoomTypesWithDistribution(
+      params.totalRooms,
+      random,
+    );
+
     double maxWidth = 0.0, maxHeight = 0.0;
     double currentLevelY = 0.0; // Track current Y position for level stacking
 
@@ -31,23 +37,26 @@ class DungeonGenerator {
       double levelHeight = 0.0;
 
       for (int column = 0; column < roomsPerLevel[row]; ++column) {
-        RoomType roomType = _getRoomType(random);
+        RoomType roomType =
+            roomTypes[addedRooms]; // Use pre-generated room types
 
-        double widthMultiplier =
-            roomType == RoomType.twoByOne || roomType == RoomType.twoByTwo
+        double widthMultiplier = roomType == RoomType.oneByOne
+            ? 1.0
+            : roomType == RoomType.twoByTwo
             ? 2.0
-            : 1.0;
-        double heightMultiplier =
-            roomType == RoomType.oneByTwo || roomType == RoomType.twoByTwo
+            : 3.0;
+        double heightMultiplier = roomType == RoomType.oneByOne
+            ? 1.0
+            : roomType == RoomType.twoByTwo
             ? 2.0
-            : 1.0;
+            : 3.0;
 
         double width = params.roomWidth * widthMultiplier;
         double height = params.roomHeight * heightMultiplier;
 
         // Position room at current X and current level Y
         Room room = Room(
-          id: addedRooms++,
+          id: addedRooms,
           type: roomType,
           position: Vector2(currentX, currentLevelY),
           size: Vector2(width, height),
@@ -59,6 +68,7 @@ class DungeonGenerator {
 
         // Move to next room position (add spacing)
         currentX += width + params.roomSpacing;
+        addedRooms++;
       }
 
       // Update dungeon dimensions
@@ -82,6 +92,33 @@ class DungeonGenerator {
       size: dungeonSize,
       roomSize: Vector2(params.roomWidth, params.roomHeight),
     );
+  }
+
+  /// Generates room types with controlled distribution to ensure desired proportions
+  static List<RoomType> _generateRoomTypesWithDistribution(
+    int totalRooms,
+    Random random,
+  ) {
+    // Calculate target counts for each room type
+    int oneByOneCount = (totalRooms * 0.6).round(); // 60% = 15 out of 25
+    int twoByTwoCount = (totalRooms * 0.32).round(); // 32% = 8 out of 25
+    int threeByThreeCount =
+        totalRooms - oneByOneCount - twoByTwoCount; // Remaining = 2 out of 25
+
+    log(
+      "Target room distribution: 1x1: $oneByOneCount, 2x2: $twoByTwoCount, 3x3: $threeByThreeCount",
+    );
+
+    // Create list with exact counts of each room type
+    List<RoomType> roomTypes = [];
+    roomTypes.addAll(List.filled(oneByOneCount, RoomType.oneByOne));
+    roomTypes.addAll(List.filled(twoByTwoCount, RoomType.twoByTwo));
+    roomTypes.addAll(List.filled(threeByThreeCount, RoomType.threeByThree));
+
+    // Shuffle the list to randomize positions while maintaining counts
+    roomTypes.shuffle(random);
+
+    return roomTypes;
   }
 
   /// Generates a list of room counts for levels that adds up to totalRooms.
@@ -127,8 +164,8 @@ class DungeonGenerator {
       // 30% chance for 2x2 room (0.5 to 0.8)
       return RoomType.twoByTwo;
     } else {
-      // 20% chance for either 1x2 or 2x1 (0.8 to 1.0)
-      return random.nextBool() ? RoomType.oneByTwo : RoomType.twoByOne;
+      // 20% chance for 3x3 room (0.8 to 1.0)
+      return RoomType.threeByThree;
     }
   }
 }

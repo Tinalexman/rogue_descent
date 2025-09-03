@@ -27,8 +27,8 @@ class RogueDescentGame extends FlameGame {
     dungeon = DungeonGenerator.generateDungeon(
       DungeonGeneratorParams(
         seed: DateTime.now().millisecondsSinceEpoch,
-        totalRooms: 10,
-        levels: 3,
+        totalRooms: 25,
+        levels: 4,
         roomWidth: 50.0,
         roomHeight: 50.0,
       ),

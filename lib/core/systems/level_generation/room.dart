@@ -14,4 +14,4 @@ class Room {
   });
 }
 
-enum RoomType { oneByOne, oneByTwo, twoByOne, twoByTwo }
+enum RoomType { oneByOne, twoByTwo, threeByThree }
