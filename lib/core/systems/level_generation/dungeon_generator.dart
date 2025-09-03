@@ -100,10 +100,9 @@ class DungeonGenerator {
     Random random,
   ) {
     // Calculate target counts for each room type
-    int oneByOneCount = (totalRooms * 0.6).round(); // 60% = 15 out of 25
-    int twoByTwoCount = (totalRooms * 0.32).round(); // 32% = 8 out of 25
-    int threeByThreeCount =
-        totalRooms - oneByOneCount - twoByTwoCount; // Remaining = 2 out of 25
+    int oneByOneCount = (totalRooms * 0.65).round(); // 65%
+    int twoByTwoCount = (totalRooms * 0.3).round(); // 30%
+    int threeByThreeCount = totalRooms - oneByOneCount - twoByTwoCount; // 5%
 
     log(
       "Target room distribution: 1x1: $oneByOneCount, 2x2: $twoByTwoCount, 3x3: $threeByThreeCount",
@@ -122,7 +121,7 @@ class DungeonGenerator {
   }
 
   /// Generates a list of room counts for levels that adds up to totalRooms.
-  /// Each level gets at least 1 room, and the distribution is somewhat random
+  /// Each level gets approximately the same number of rooms with minimal deviation
   static List<int> _generateRoomDistribution(
     int seed,
     int totalRooms,
@@ -138,35 +137,38 @@ class DungeonGenerator {
       return [totalRooms];
     }
 
-    List<int> distribution = List.filled(
-      levels,
-      1,
-    ); // Start with 1 room per level
-    int remainingRooms = totalRooms - levels; // Distribute remaining rooms
-
-    // Randomly distribute remaining rooms across levels
     Random random = Random(seed);
-    for (int i = 0; i < remainingRooms; i++) {
+
+    // Calculate base rooms per level and remainder
+    int baseRoomsPerLevel = totalRooms ~/ levels;
+    int remainder = totalRooms % levels;
+
+    // Start with base distribution
+    List<int> distribution = List.filled(levels, baseRoomsPerLevel);
+
+    // Distribute remainder rooms randomly, ensuring no level gets more than +1 from base
+    for (int i = 0; i < remainder; i++) {
       int randomLevel = random.nextInt(levels);
       distribution[randomLevel]++;
     }
 
-    return distribution;
-  }
-
-  static RoomType _getRoomType(Random random) {
-    double roll = random.nextDouble(); // 0.0 to 1.0
-
-    if (roll < 0.5) {
-      // 50% chance for 1x1 room
-      return RoomType.oneByOne;
-    } else if (roll < 0.8) {
-      // 30% chance for 2x2 room (0.5 to 0.8)
-      return RoomType.twoByTwo;
-    } else {
-      // 20% chance for 3x3 room (0.8 to 1.0)
-      return RoomType.threeByThree;
+    // Ensure no level deviates more than ±1 from the average
+    int average = totalRooms ~/ levels;
+    for (int i = 0; i < levels; i++) {
+      if (distribution[i] > average + 1) {
+        // Find a level with fewer rooms to balance
+        for (int j = 0; j < levels; j++) {
+          if (distribution[j] < average) {
+            distribution[i]--;
+            distribution[j]++;
+            break;
+          }
+        }
+      }
     }
+
+    log("Room distribution: $distribution (average: $average)");
+    return distribution;
   }
 }
 
